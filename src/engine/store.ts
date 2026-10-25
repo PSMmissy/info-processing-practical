@@ -3,7 +3,13 @@ import type { ExamRecord } from './types';
 const get = <T,>(k: string, d: T): T => { try { const v = localStorage.getItem(k); return v ? (JSON.parse(v) as T) : d; } catch { return d; } };
 const set = (k: string, v: unknown) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* */ } };
 
-const K = { hist: 'jb.hist', glStat: 'jb.gl.stat', glKnown: 'jb.gl.known', qsStat: 'jb.qs.stat', draft: 'jb.draft', theme: 'jb.theme', noteDone: 'jb.note.done' };
+const K = { hist: 'jb.hist', glStat: 'jb.gl.stat', glKnown: 'jb.gl.known', glHard: 'jb.gl.hard', glSel: 'jb.gl.sel', qsStat: 'jb.qs.stat', draft: 'jb.draft', theme: 'jb.theme', noteDone: 'jb.note.done' };
+
+const flagOps = (key: string) => ({
+  get(): Record<string, 1> { return get(key, {}); },
+  toggle(id: string) { const k = get<Record<string, 1>>(key, {}); if (k[id]) delete k[id]; else k[id] = 1; set(key, k); },
+  setMany(ids: string[], on: boolean) { const k = get<Record<string, 1>>(key, {}); ids.forEach((id) => { if (on) k[id] = 1; else delete k[id]; }); set(key, k); },
+});
 
 export type GlStat = Record<string, { w: number; r: number; at?: string }>;
 export type QsStat = Record<string, { w: number; r: number; at?: string }>;
@@ -31,6 +37,10 @@ export const store = {
   glKnown(): Record<string, 1> { return get(K.glKnown, {}); },
   glToggleKnown(id: string) { const k = this.glKnown(); if (k[id]) delete k[id]; else k[id] = 1; set(K.glKnown, k); },
   glSetKnown(ids: string[], on: boolean) { const k = this.glKnown(); ids.forEach((id) => { if (on) k[id] = 1; else delete k[id]; }); set(K.glKnown, k); },
+  /** 잘 안 외워짐 */
+  glHard: flagOps(K.glHard),
+  /** 선택 (테스트 범위용) */
+  glSel: flagOps(K.glSel),
   qsStat(): QsStat { return get(K.qsStat, {}); },
   qsAdd(id: string, ok: boolean) { const s = this.qsStat(); const st = (s[id] ||= { w: 0, r: 0 }); if (ok) st.r++; else st.w++; st.at = new Date().toISOString(); set(K.qsStat, s); },
   draft<T>(): T | null { return get<T | null>(K.draft, null); },
